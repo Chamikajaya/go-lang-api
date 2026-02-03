@@ -1,0 +1,21 @@
+version: "2"
+
+sql:
+  - schema: "db/migrations"
+    queries: "db/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        package: "database"
+        out: "db/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true
+        emit_exact_table_names: false
+        emit_empty_slices: true
+        overrides: # map custom DB types to Go types
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "user_status"
+            go_type: "string"
