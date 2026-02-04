@@ -47,12 +47,12 @@ ORDER BY created_at DESC;
 -- Updates a user's information
 UPDATE users
 SET
-    first_name = COALESCE($2, first_name),
-    last_name = COALESCE($3, last_name),
-    email = COALESCE($4, email),
-    phone = COALESCE($5, phone),
-    age = COALESCE($6, age),
-    status = COALESCE($7, status),
+    first_name = COALESCE(sqlc.narg('first_name'), first_name),
+    last_name = COALESCE(sqlc.narg('last_name'), last_name),
+    email = COALESCE(sqlc.narg('email'), email),
+    phone = COALESCE(sqlc.narg('phone'), phone),
+    age = COALESCE(sqlc.narg('age'), age),
+    status = COALESCE(sqlc.narg('status'), status),
     updated_at = CURRENT_TIMESTAMP
 WHERE user_id = $1
 RETURNING *;
