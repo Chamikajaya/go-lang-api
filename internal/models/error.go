@@ -8,7 +8,7 @@ import (
 type AppError struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
-	Err        error  `json:"-"`  // internal error, not exposed to clients in json 
+	Err        error  `json:"-"`  // internal error, not exposed to clients in json responses
 }
 
 func (e *AppError) Error() string {
