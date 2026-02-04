@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 
 	database "user-management-api/db/sqlc"
@@ -10,17 +9,19 @@ import (
 	"user-management-api/internal/utils"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserService struct {
-	db      *sql.DB           
-	queries *database.Queries 
+	pool    *pgxpool.Pool
+	queries *database.Queries
 }
 
 // creating the user service instance - dependency injection
-func NewUserService(db *sql.DB, queries *database.Queries) *UserService {
+func NewUserService(pool *pgxpool.Pool, queries *database.Queries) *UserService {
 	return &UserService{
-		db:      db,
+		pool:    pool,
 		queries: queries,
 	}
 }
@@ -73,8 +74,8 @@ func (s *UserService) GetUserByID(ctx context.Context, userID string) (*models.U
 	// Query database
 	user, err := s.queries.GetUserByID(ctx, id)
 	if err != nil {
-		// sql.ErrNoRows means not found
-		if errors.Is(err, sql.ErrNoRows) {
+		// pgx.ErrNoRows means not found
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, models.NewNotFoundError("User not found")
 		}
 		return nil, models.NewInternalServerError("Failed to get user", err)

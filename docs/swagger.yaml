@@ -1,0 +1,272 @@
+definitions:
+  user-management-api_internal_models.CreateUserRequest:
+    properties:
+      age:
+        type: integer
+      email:
+        type: string
+      firstName:
+        maxLength: 50
+        minLength: 2
+        type: string
+      lastName:
+        maxLength: 50
+        minLength: 2
+        type: string
+      phone:
+        description: Pointer = optional field
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/user-management-api_internal_models.UserStatus'
+        enum:
+        - Active
+        - Inactive
+    required:
+    - email
+    - firstName
+    - lastName
+    type: object
+  user-management-api_internal_models.ErrorResponse:
+    properties:
+      details:
+        additionalProperties:
+          type: string
+        description: omitempty = exclude if empty
+        type: object
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  user-management-api_internal_models.ListUsersResponse:
+    properties:
+      total:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/user-management-api_internal_models.UserResponse'
+        type: array
+    type: object
+  user-management-api_internal_models.SuccessResponse:
+    properties:
+      data:
+        description: interface{} = any type
+      message:
+        type: string
+    type: object
+  user-management-api_internal_models.UpdateUserRequest:
+    properties:
+      age:
+        type: integer
+      email:
+        type: string
+      firstName:
+        maxLength: 50
+        minLength: 2
+        type: string
+      lastName:
+        maxLength: 50
+        minLength: 2
+        type: string
+      phone:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/user-management-api_internal_models.UserStatus'
+        enum:
+        - Active
+        - Inactive
+    type: object
+  user-management-api_internal_models.UserResponse:
+    properties:
+      age:
+        type: integer
+      createdAt:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      phone:
+        type: string
+      status:
+        $ref: '#/definitions/user-management-api_internal_models.UserStatus'
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  user-management-api_internal_models.UserStatus:
+    enum:
+    - Active
+    - Inactive
+    type: string
+    x-enum-varnames:
+    - UserStatusActive
+    - UserStatusInactive
+info:
+  contact: {}
+paths:
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ListUsersResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+      summary: List all users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with the provided information
+      parameters:
+      - description: User to create
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/user-management-api_internal_models.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+      summary: Create a new user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by their ID
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+      summary: Delete a user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Get a single user by their UUID
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+      summary: Get a user by ID
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Update a user's information by ID
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User fields to update
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/user-management-api_internal_models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/user-management-api_internal_models.ErrorResponse'
+      summary: Update a user
+      tags:
+      - users
+swagger: "2.0"
