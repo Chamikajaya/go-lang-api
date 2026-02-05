@@ -15,17 +15,16 @@ import (
 
 type UserService struct {
 	pool    *pgxpool.Pool
-	queries *database.Queries
+	queries database.Querier
 }
 
 // creating the user service instance - dependency injection
-func NewUserService(pool *pgxpool.Pool, queries *database.Queries) *UserService {
+func NewUserService(pool *pgxpool.Pool, queries database.Querier) *UserService {
 	return &UserService{
 		pool:    pool,
 		queries: queries,
 	}
 }
-
 
 func (s *UserService) CreateUser(ctx context.Context, req models.CreateUserRequest) (*models.UserResponse, error) {
 
@@ -62,9 +61,8 @@ func (s *UserService) CreateUser(ctx context.Context, req models.CreateUserReque
 
 }
 
-
 func (s *UserService) GetUserByID(ctx context.Context, userID string) (*models.UserResponse, error) {
-	
+
 	// Parse UUID string to UUID type
 	id, err := uuid.Parse(userID)
 	if err != nil {
@@ -123,13 +121,13 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, req models.
 		if err != nil {
 			return nil, models.NewInternalServerError("Failed to check email", err)
 		}
-		
+
 		// Get current user to compare emails
 		currentUser, err := s.queries.GetUserByID(ctx, id)
 		if err != nil {
 			return nil, models.NewInternalServerError("Failed to get user", err)
 		}
-		
+
 		// Email exists and belongs to different user
 		if emailExists && currentUser.Email != *req.Email {
 			return nil, models.NewConflictError("Email already exists")

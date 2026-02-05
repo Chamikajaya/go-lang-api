@@ -25,18 +25,17 @@ import (
 )
 
 func main() {
-	// Load configuration
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Connect to database
 	pool, err := connectDB(cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer pool.Close() // Close when main() exits
+	defer pool.Close() // Close when main() exits - defer is used to schedule a function call to run just before the surrounding function returns
 
 	log.Println("Successfully connected to database")
 
@@ -58,7 +57,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start server in a goroutine
+	// Start server in a goroutine - non blocking manner
 	go func() {
 		log.Printf("Server starting on port %s", cfg.ServerPort)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -100,11 +99,11 @@ func setupRouter(userHandler *handlers.UserHandler) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware (applies to all routes)
-	r.Use(chimiddleware.RequestID)   // Adds request ID for tracing
-	r.Use(middleware.Logger)         // custom logger
-	r.Use(middleware.Recovery)       // Recover from panics
-	r.Use(middleware.CORS)           // CORS headers
-	r.Use(middleware.ContentTypeJSON) // Set JSON content type
+	r.Use(chimiddleware.RequestID)                 // Adds request ID for tracing
+	r.Use(middleware.Logger)                       // custom logger
+	r.Use(middleware.Recovery)                     // Recover from panics
+	r.Use(middleware.CORS)                         // CORS headers
+	r.Use(middleware.ContentTypeJSON)              // Set JSON content type
 	r.Use(chimiddleware.Timeout(60 * time.Second)) // Request timeout
 
 	// Health check endpoint
@@ -136,9 +135,9 @@ func setupRouter(userHandler *handlers.UserHandler) *chi.Mux {
 // gracefulShutdown handles graceful shutdown on SIGINT/SIGTERM
 func gracefulShutdown(server *http.Server) {
 	quit := make(chan os.Signal, 1)
-	
+
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	<-quit
 	log.Println("Shutting down server...")
 

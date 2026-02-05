@@ -7,7 +7,7 @@ import (
 	"user-management-api/internal/models"
 )
 
-// sendJSON sends a JSON response
+// sendJSON sends a JSON response (data to json)
 func (h *UserHandler) sendJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
 	// json.NewEncoder writes to w (io.Writer)

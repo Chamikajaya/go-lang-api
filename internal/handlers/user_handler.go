@@ -37,26 +37,26 @@ func NewUserHandler(service *service.UserService, validator *validator.Validator
 // @Router /users [post]
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateUserRequest
-	
+
 	// Decode JSON body into struct
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.sendError(w, models.NewBadRequestError("Invalid request body"))
 		return
 	}
-	
+
 	// Validate request
 	if validationErrors := h.validator.ValidateStruct(req); validationErrors != nil {
 		h.sendValidationError(w, validationErrors)
 		return
 	}
-	
+
 	// Call service layer
 	user, err := h.service.CreateUser(r.Context(), req)
 	if err != nil {
 		h.handleServiceError(w, err)
 		return
 	}
-	
+
 	// Send successful response
 	h.sendJSON(w, http.StatusCreated, user)
 }
@@ -76,13 +76,13 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := chi.URLParam(r, "id")
-	
+
 	user, err := h.service.GetUserByID(r.Context(), userID)
 	if err != nil {
 		h.handleServiceError(w, err)
 		return
 	}
-	
+
 	h.sendJSON(w, http.StatusOK, user)
 }
 
@@ -101,7 +101,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		h.handleServiceError(w, err)
 		return
 	}
-	
+
 	h.sendJSON(w, http.StatusOK, users)
 }
 
@@ -121,25 +121,25 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // @Router /users/{id} [patch]
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "id")
-	
+
 	var req models.UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.sendError(w, models.NewBadRequestError("Invalid request body"))
 		return
 	}
-	
+
 	// Validate request
 	if validationErrors := h.validator.ValidateStruct(req); validationErrors != nil {
 		h.sendValidationError(w, validationErrors)
 		return
 	}
-	
+
 	user, err := h.service.UpdateUser(r.Context(), userID, req)
 	if err != nil {
 		h.handleServiceError(w, err)
 		return
 	}
-	
+
 	h.sendJSON(w, http.StatusOK, user)
 }
 
@@ -157,13 +157,13 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Router /users/{id} [delete]
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "id")
-	
+
 	err := h.service.DeleteUser(r.Context(), userID)
 	if err != nil {
 		h.handleServiceError(w, err)
 		return
 	}
-	
+
 	h.sendJSON(w, http.StatusOK, models.SuccessResponse{
 		Message: "User deleted successfully",
 	})
