@@ -2,6 +2,8 @@ package models
 
 import "time"
 
+/*  HTTP API request/response (external API contract) */
+
 type CreateUserRequest struct {
 	FirstName string `json:"firstName" example:"John"`
 	LastName  string `json:"lastName" example:"Doe"`
