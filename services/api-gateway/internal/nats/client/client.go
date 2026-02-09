@@ -33,32 +33,30 @@ const (
 	SubjectUserDelete = "user.delete"
 )
 
-// RPCResponse represents the wrapper response from user-service
+// the wrapper response from user-service
 type RPCResponse struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data,omitempty"`
 	Error   *RPCError       `json:"error,omitempty"`
 }
 
-// RPCError represents an error in RPC response
+// error in RPC response
 type RPCError struct {
 	Code    int               `json:"code"`
 	Message string            `json:"message"`
 	Details map[string]string `json:"details,omitempty"`
 }
 
-// Request sends an RPC request and waits for a response
-func (c *Client) Request(ctx context.Context, subject string, request interface{}) (*nats.Msg, error) {
-	data, err := json.Marshal(request)
+// sends an RPC request and waits for a response
+func (c *Client) request(ctx context.Context, subject string, req interface{}) (*nats.Msg, error) {
+	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a context with timeout
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	// Send request
 	msg, err := c.nc.RequestWithContext(ctx, subject, data)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, nats.ErrTimeout) {
@@ -69,149 +67,89 @@ func (c *Client) Request(ctx context.Context, subject string, request interface{
 		}
 		return nil, err
 	}
-
 	return msg, nil
 }
 
-// CreateUser sends a request to create a user
+// doRequest sends RPC request and handles common response parsing
+// Returns: (rawData, errorResponse, error)
+func (c *Client) doRequest(ctx context.Context, subject string, req interface{}) (json.RawMessage, *ErrorResponse, error) {
+	msg, err := c.request(ctx, subject, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var rpcResp RPCResponse
+	if err := json.Unmarshal(msg.Data, &rpcResp); err != nil {
+		return nil, nil, err
+	}
+
+	if !rpcResp.Success && rpcResp.Error != nil {
+		return nil, &ErrorResponse{
+			Error:   getErrorName(rpcResp.Error.Code),
+			Message: rpcResp.Error.Message,
+			Details: rpcResp.Error.Details,
+		}, nil
+	}
+
+	return rpcResp.Data, nil, nil
+}
+
 func (c *Client) CreateUser(ctx context.Context, req *CreateUserRPCRequest) (*models.UserResponse, *ErrorResponse, error) {
-	msg, err := c.Request(ctx, SubjectUserCreate, req)
-	if err != nil {
-		return nil, nil, err
+	data, errResp, err := c.doRequest(ctx, SubjectUserCreate, req)
+	if err != nil || errResp != nil {
+		return nil, errResp, err
 	}
 
-	// Parse the RPC wrapper response
-	var rpcResp RPCResponse
-	if err := json.Unmarshal(msg.Data, &rpcResp); err != nil {
-		return nil, nil, err
-	}
-
-	if !rpcResp.Success && rpcResp.Error != nil {
-		return nil, &ErrorResponse{
-			Error:   getErrorName(rpcResp.Error.Code),
-			Message: rpcResp.Error.Message,
-			Details: rpcResp.Error.Details,
-		}, nil
-	}
-
-	// Parse success response data
 	var resp models.UserResponse
-	if err := json.Unmarshal(rpcResp.Data, &resp); err != nil {
+	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, nil, err
 	}
-
 	return &resp, nil, nil
 }
 
-// GetUser sends a request to get a user by ID
 func (c *Client) GetUser(ctx context.Context, req *GetUserRPCRequest) (*models.UserResponse, *ErrorResponse, error) {
-	msg, err := c.Request(ctx, SubjectUserGet, req)
-	if err != nil {
-		return nil, nil, err
+	data, errResp, err := c.doRequest(ctx, SubjectUserGet, req)
+	if err != nil || errResp != nil {
+		return nil, errResp, err
 	}
 
-	// Parse the RPC wrapper response
-	var rpcResp RPCResponse
-	if err := json.Unmarshal(msg.Data, &rpcResp); err != nil {
-		return nil, nil, err
-	}
-
-	if !rpcResp.Success && rpcResp.Error != nil {
-		return nil, &ErrorResponse{
-			Error:   getErrorName(rpcResp.Error.Code),
-			Message: rpcResp.Error.Message,
-			Details: rpcResp.Error.Details,
-		}, nil
-	}
-
-	// Parse success response data
 	var resp models.UserResponse
-	if err := json.Unmarshal(rpcResp.Data, &resp); err != nil {
+	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, nil, err
 	}
-
 	return &resp, nil, nil
 }
 
-// ListUsers sends a request to list all users
 func (c *Client) ListUsers(ctx context.Context, req *ListUsersRPCRequest) (*models.ListUsersResponse, *ErrorResponse, error) {
-	msg, err := c.Request(ctx, SubjectUserList, req)
-	if err != nil {
-		return nil, nil, err
+	data, errResp, err := c.doRequest(ctx, SubjectUserList, req)
+	if err != nil || errResp != nil {
+		return nil, errResp, err
 	}
 
-	// Parse the RPC wrapper response
-	var rpcResp RPCResponse
-	if err := json.Unmarshal(msg.Data, &rpcResp); err != nil {
-		return nil, nil, err
-	}
-
-	if !rpcResp.Success && rpcResp.Error != nil {
-		return nil, &ErrorResponse{
-			Error:   getErrorName(rpcResp.Error.Code),
-			Message: rpcResp.Error.Message,
-			Details: rpcResp.Error.Details,
-		}, nil
-	}
-
-	// Parse success response data - it's a ListUsersResponse object with users array
 	var resp models.ListUsersResponse
-	if err := json.Unmarshal(rpcResp.Data, &resp); err != nil {
+	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, nil, err
 	}
-
 	return &resp, nil, nil
 }
 
-// UpdateUser sends a request to update a user
 func (c *Client) UpdateUser(ctx context.Context, req *UpdateUserRPCRequest) (*models.UserResponse, *ErrorResponse, error) {
-	msg, err := c.Request(ctx, SubjectUserUpdate, req)
-	if err != nil {
-		return nil, nil, err
+	data, errResp, err := c.doRequest(ctx, SubjectUserUpdate, req)
+	if err != nil || errResp != nil {
+		return nil, errResp, err
 	}
 
-	// Parse the RPC wrapper response
-	var rpcResp RPCResponse
-	if err := json.Unmarshal(msg.Data, &rpcResp); err != nil {
-		return nil, nil, err
-	}
-
-	if !rpcResp.Success && rpcResp.Error != nil {
-		return nil, &ErrorResponse{
-			Error:   getErrorName(rpcResp.Error.Code),
-			Message: rpcResp.Error.Message,
-			Details: rpcResp.Error.Details,
-		}, nil
-	}
-
-	// Parse success response data
 	var resp models.UserResponse
-	if err := json.Unmarshal(rpcResp.Data, &resp); err != nil {
+	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, nil, err
 	}
-
 	return &resp, nil, nil
 }
 
-// DeleteUser sends a request to delete a user
 func (c *Client) DeleteUser(ctx context.Context, req *DeleteUserRPCRequest) (*models.SuccessResponse, *ErrorResponse, error) {
-	msg, err := c.Request(ctx, SubjectUserDelete, req)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Parse the RPC wrapper response
-	var rpcResp RPCResponse
-	if err := json.Unmarshal(msg.Data, &rpcResp); err != nil {
-		return nil, nil, err
-	}
-
-	if !rpcResp.Success && rpcResp.Error != nil {
-		return nil, &ErrorResponse{
-			Error:   getErrorName(rpcResp.Error.Code),
-			Message: rpcResp.Error.Message,
-			Details: rpcResp.Error.Details,
-		}, nil
+	_, errResp, err := c.doRequest(ctx, SubjectUserDelete, req)
+	if err != nil || errResp != nil {
+		return nil, errResp, err
 	}
 
 	return &models.SuccessResponse{
@@ -220,7 +158,6 @@ func (c *Client) DeleteUser(ctx context.Context, req *DeleteUserRPCRequest) (*mo
 	}, nil, nil
 }
 
-// getErrorName converts HTTP status codes to error names
 func getErrorName(code int) string {
 	switch code {
 	case 400:
