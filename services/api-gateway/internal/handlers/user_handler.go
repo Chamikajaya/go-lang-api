@@ -81,7 +81,6 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build RPC request
 	rpcReq := &client.CreateUserRPCRequest{
 		ActorID: getActorID(r),
 		Data:    req,

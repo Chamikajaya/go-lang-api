@@ -30,12 +30,16 @@ go.work
 .DS_Store
 Thumbs.db
 
-# Generated code 
-db/sqlc/*.go
+# Generated code (sqlc in each service)
+services/*/db/sqlc/*.go
 
 # Build output
-/bin/
-/dist/
+bin/
+dist/
+**/bin/
 
 # Logs
 *.log
+
+# Docker volumes
+postgres_data/

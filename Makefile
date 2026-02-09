@@ -1,20 +1,26 @@
-.PHONY: help postgres createdb dropdb migrateup migratedown sqlc test test-unit test-integration test-coverage clean run lint
+.PHONY: help postgres createdb dropdb migrateup migratedown sqlc test test-unit test-integration test-coverage clean run lint docker-up docker-down user-service-build user-service-run
 
 help:
 	@echo "Available commands:"
-	@echo "  make postgres         - Start PostgreSQL container"
-	@echo "  make createdb         - Create database"
-	@echo "  make dropdb           - Drop database"
-	@echo "  make migrateup        - Run database migrations"
-	@echo "  make migratedown      - Rollback database migrations"
-	@echo "  make sqlc             - Generate Go code from SQL"
-	@echo "  make test             - Run all tests"
-	@echo "  make test-unit        - Run unit tests only"
-	@echo "  make test-integration - Run integration tests (needs Docker)"
-	@echo "  make test-coverage    - Run tests with coverage report"
-	@echo "  make lint             - Run linters"
-	@echo "  make run              - Run the application"
-	@echo "  make clean            - Stop containers and clean up"
+	@echo "  make postgres            - Start PostgreSQL container"
+	@echo "  make createdb            - Create database"
+	@echo "  make dropdb              - Drop database"
+	@echo "  make migrateup           - Run database migrations"
+	@echo "  make migratedown         - Rollback database migrations"
+	@echo "  make sqlc                - Generate Go code from SQL"
+	@echo "  make test                - Run all tests"
+	@echo "  make test-unit           - Run unit tests only"
+	@echo "  make test-integration    - Run integration tests (needs Docker)"
+	@echo "  make test-coverage       - Run tests with coverage report"
+	@echo "  make lint                - Run linters"
+	@echo "  make run                 - Run the monolith application"
+	@echo "  make clean               - Stop containers and clean up"
+	@echo ""
+	@echo "Microservices commands:"
+	@echo "  make docker-up           - Start all microservices with Docker Compose"
+	@echo "  make docker-down         - Stop all microservices"
+	@echo "  make user-service-build  - Build USER service"
+	@echo "  make user-service-run    - Run USER service locally"
 
 # Start PostgreSQL with Docker Compose
 postgres:
@@ -89,3 +95,33 @@ clean:
 deps:
 	go mod download
 	go mod tidy
+
+# ============================================================================
+# Microservices Commands
+# ============================================================================
+
+# Start all services with Docker Compose
+docker-up:
+	docker-compose up -d --build
+	@echo "All services started. Check status with: docker-compose ps"
+
+# Stop all services
+docker-down:
+	docker-compose down
+	@echo "All services stopped."
+
+# Build USER service
+user-service-build:
+	cd services/user-service && go build -o bin/user-service ./cmd/main.go
+
+# Run USER service locally
+user-service-run:
+	cd services/user-service && go run ./cmd/main.go
+
+# View logs from all services
+logs:
+	docker-compose logs -f
+
+# View logs from USER service only
+logs-user:
+	docker-compose logs -f user-service
