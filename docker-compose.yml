@@ -1,4 +1,5 @@
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:alpine
     container_name: user_api_db
@@ -16,6 +17,80 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - microservices-network
+
+  # NATS Message Broker
+  nats:
+    image: nats:alpine3.22
+    container_name: nats_broker
+    restart: unless-stopped
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+      - "6222:6222"   # Cluster routing
+    command: ["--http_port", "8222", "-js"]  # Enable JetStream
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  # USER Service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user_service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: user_management
+      NATS_URL: nats://nats:4222
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - microservices-network
+
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      NATS_URL: nats://nats:4222
+      SERVER_PORT: "8080"
+      RPC_TIMEOUT_SEC: "5"
+      LOG_LEVEL: info
+    depends_on:
+      nats:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
 
 volumes:
   postgres_data:
