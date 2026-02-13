@@ -4,8 +4,10 @@ go 1.25.6
 
 require (
 	github.com/go-chi/chi/v5 v5.2.4
+	github.com/gorilla/websocket v1.5.3
 	github.com/nats-io/nats.go v1.41.0
 	github.com/swaggo/http-swagger v1.3.4
+	github.com/swaggo/swag v1.16.6
 )
 
 require (
@@ -20,7 +22,6 @@ require (
 	github.com/nats-io/nkeys v0.4.9 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
-	github.com/swaggo/swag v1.16.6 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect

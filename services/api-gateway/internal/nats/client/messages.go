@@ -7,7 +7,7 @@ import (
 /* NATS RPC request wrappers - adds ActorID context to requests */
 
 type CreateUserRPCRequest struct {
-	ActorID string                   `json:"actor_id"`
+	ActorID string                   `json:"actor_id"` // to identify who made the request - could be like jwt subject or user ID
 	Data    models.CreateUserRequest `json:"data"`
 }
 

@@ -71,7 +71,6 @@ func (c *Client) request(ctx context.Context, subject string, req interface{}) (
 }
 
 // doRequest sends RPC request and handles common response parsing
-// Returns: (rawData, errorResponse, error)
 func (c *Client) doRequest(ctx context.Context, subject string, req interface{}) (json.RawMessage, *ErrorResponse, error) {
 	msg, err := c.request(ctx, subject, req)
 	if err != nil {

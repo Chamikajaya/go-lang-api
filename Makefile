@@ -1,4 +1,4 @@
-.PHONY: help postgres createdb dropdb migrateup migratedown sqlc test test-unit test-integration test-coverage clean run lint docker-up docker-down user-service-build user-service-run
+.PHONY: help postgres createdb dropdb migrateup migratedown sqlc test test-unit test-integration test-coverage clean run lint docker-up docker-down docker-rebuild user-service-build user-service-run api-gateway-build api-gateway-run logs logs-user logs-gateway
 
 help:
 	@echo "Available commands:"
@@ -19,8 +19,14 @@ help:
 	@echo "Microservices commands:"
 	@echo "  make docker-up           - Start all microservices with Docker Compose"
 	@echo "  make docker-down         - Stop all microservices"
+	@echo "  make docker-rebuild      - Rebuild and restart all services"
 	@echo "  make user-service-build  - Build USER service"
 	@echo "  make user-service-run    - Run USER service locally"
+	@echo "  make api-gateway-build   - Build API Gateway service"
+	@echo "  make api-gateway-run     - Run API Gateway locally"
+	@echo "  make logs                - View logs from all services"
+	@echo "  make logs-user           - View logs from USER service"
+	@echo "  make logs-gateway        - View logs from API Gateway"
 
 # Start PostgreSQL with Docker Compose
 postgres:
@@ -118,6 +124,20 @@ user-service-build:
 user-service-run:
 	cd services/user-service && go run ./cmd/main.go
 
+# Build API Gateway service
+api-gateway-build:
+	cd services/api-gateway && go build -o bin/api-gateway ./cmd/main.go
+
+# Run API Gateway locally
+api-gateway-run:
+	cd services/api-gateway && go run ./cmd/main.go
+
+# Rebuild and restart all services
+docker-rebuild:
+	docker-compose down
+	docker-compose up -d --build
+	@echo "All services rebuilt and started."
+
 # View logs from all services
 logs:
 	docker-compose logs -f
@@ -125,3 +145,7 @@ logs:
 # View logs from USER service only
 logs-user:
 	docker-compose logs -f user-service
+
+# View logs from API Gateway only
+logs-gateway:
+	docker-compose logs -f api-gateway
