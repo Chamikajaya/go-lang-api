@@ -25,17 +25,18 @@ const (
 	sendBufferSize = 256
 )
 
-// upgrader configures the WebSocket upgrader with permissive origin check
+// upgrader - converts http connection to ws
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins (tighten in production)
+		return true
 	},
 }
 
 // HandleWebSocket handles new WebSocket connection requests.
-// Clients connect with: GET /ws?userId={uuid}
+
+// GET /ws?userId={uuid}
 func HandleWebSocket(manager *Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.URL.Query().Get("userId")
@@ -64,9 +65,7 @@ func HandleWebSocket(manager *Manager) http.HandlerFunc {
 	}
 }
 
-// readPump reads messages from the WebSocket connection.
-// We don't expect meaningful messages from the client (notification-only),
-// but we need this to detect disconnections and handle pong messages.
+// Continuously reads from WebSocket to detect disconnections
 func readPump(client *Client, manager *Manager) {
 	defer func() {
 		manager.Unregister(client)
@@ -81,7 +80,6 @@ func readPump(client *Client, manager *Manager) {
 	})
 
 	for {
-		// Read messages (we discard them — WebSocket is notification-only)
 		_, _, err := client.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
@@ -92,8 +90,7 @@ func readPump(client *Client, manager *Manager) {
 	}
 }
 
-// writePump writes messages from the Send channel to the WebSocket connection.
-// It also sends periodic ping messages to keep the connection alive.
+// send messages to client and handle pings - sending notifications
 func writePump(client *Client, manager *Manager) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {

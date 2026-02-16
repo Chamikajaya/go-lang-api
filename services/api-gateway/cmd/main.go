@@ -27,13 +27,6 @@ import (
 // @title User Management API
 // @version 2.0
 // @description API Gateway for User Management Microservices
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.email support@example.com
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
 
 // @host localhost:8080
 // @BasePath /

@@ -19,7 +19,6 @@ const (
 	TopicUserDeleted = "user.events.deleted"
 )
 
-// Event mirrors the event structure published by user-service
 type Event struct {
 	EventID   string          `json:"event_id"`
 	EventType string          `json:"event_type"`
@@ -29,7 +28,7 @@ type Event struct {
 	Data      json.RawMessage `json:"data"`
 }
 
-// Subscriber listens to NATS PubSub events and broadcasts them via WebSocket
+// * Subscriber listens to NATS PubSub events and broadcasts them via WebSocket
 type Subscriber struct {
 	nc      *nats.Conn           // nats connection
 	manager *ws.Manager          // websocket manager to broadcast messages to clients

@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// WSMessage is the WebSocket message format sent to clients
+// WebSocket message format sent to clients
 type WSMessage struct {
 	Type      string      `json:"type"`
 	Timestamp time.Time   `json:"timestamp"`
@@ -17,7 +17,7 @@ type WSMessage struct {
 	Data      interface{} `json:"data"`
 }
 
-// Client represents a single WebSocket connection
+// Client -> single WebSocket connection
 type Client struct {
 	UserID string          // Identifies which user owns this connection
 	Conn   *websocket.Conn // Actual WebSocket connection
@@ -39,7 +39,7 @@ func NewManager() *Manager {
 	}
 }
 
-// Run starts the manager's main loop for handling register/unregister events. - go routine
+// starts the manager's main loop for handling register/unregister events. - go routine
 func (m *Manager) Run() {
 	for {
 		select {
