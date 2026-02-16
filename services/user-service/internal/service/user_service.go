@@ -18,10 +18,10 @@ import (
 type UserService struct {
 	pool      *pgxpool.Pool
 	queries   database.Querier
-	publisher *publisher.EventPublisher
+	publisher publisher.EventPublisherInterface
 }
 
-func NewUserService(pool *pgxpool.Pool, queries database.Querier, pub *publisher.EventPublisher) *UserService {
+func NewUserService(pool *pgxpool.Pool, queries database.Querier, pub publisher.EventPublisherInterface) *UserService {
 	return &UserService{
 		pool:      pool,
 		queries:   queries,
