@@ -18,8 +18,8 @@ const (
 	// Send pings to peer with this period
 	pingPeriod = (pongWait * 9) / 10
 
-	// Maximum message size allowed from peer
-	maxMessageSize = 512
+	// Maximum message size allowed from peer (increased to support CRUD JSON payloads)
+	maxMessageSize = 4096
 
 	// Send channel buffer size - can hold upto 256 messages before blocking
 	sendBufferSize = 256
@@ -35,9 +35,10 @@ var upgrader = websocket.Upgrader{
 }
 
 // HandleWebSocket handles new WebSocket connection requests.
-
+// The crudHandler parameter enables bidirectional CRUD operations over WebSocket.
+//
 // GET /ws?userId={uuid}
-func HandleWebSocket(manager *Manager) http.HandlerFunc {
+func HandleWebSocket(manager *Manager, crudHandler *CRUDHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.URL.Query().Get("userId")
 		if userID == "" {
@@ -61,12 +62,13 @@ func HandleWebSocket(manager *Manager) http.HandlerFunc {
 
 		// Start read and write pumps in separate goroutines
 		go writePump(client, manager)
-		go readPump(client, manager)
+		go readPump(client, manager, crudHandler)
 	}
 }
 
-// Continuously reads from WebSocket to detect disconnections
-func readPump(client *Client, manager *Manager) {
+// readPump reads messages from the WebSocket connection and forwards them
+// to the CRUDHandler for processing. This enables bidirectional CRUD over WebSocket.
+func readPump(client *Client, manager *Manager, crudHandler *CRUDHandler) {
 	defer func() {
 		manager.Unregister(client)
 		client.Conn.Close()
@@ -80,12 +82,17 @@ func readPump(client *Client, manager *Manager) {
 	})
 
 	for {
-		_, _, err := client.Conn.ReadMessage()
+		_, message, err := client.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
 				log.Printf("WebSocket: unexpected close for user %s: %v", client.UserID, err)
 			}
 			break
+		}
+
+		// Forward the message to the CRUD handler for processing
+		if crudHandler != nil && len(message) > 0 {
+			crudHandler.HandleMessage(client.UserID, message)
 		}
 	}
 }

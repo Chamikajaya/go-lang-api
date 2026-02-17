@@ -53,6 +53,10 @@ func main() {
 	go wsManager.Run()
 	log.Println("WebSocket manager started")
 
+	// Initialize WebSocket CRUD handler (reuses the same NATS RPC client as REST)
+	wsCRUDHandler := ws.NewCRUDHandler(rpcClient, wsManager)
+	log.Println("WebSocket CRUD handler initialized")
+
 	// Initialize and start NATS event subscriber (bridges NATS events → WebSocket)
 	eventSubscriber := subscriber.NewSubscriber(nc, wsManager)
 	if err := eventSubscriber.Start(); err != nil {
@@ -61,7 +65,7 @@ func main() {
 	log.Println("NATS event subscriber started")
 
 	// Setup router
-	router := setupRouter(userHandler, wsManager)
+	router := setupRouter(userHandler, wsManager, wsCRUDHandler)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -112,7 +116,7 @@ func connectNATS(cfg *config.Config) (*nats.Conn, error) {
 	return nc, nil
 }
 
-func setupRouter(userHandler *handlers.UserHandler, wsManager *ws.Manager) *chi.Mux {
+func setupRouter(userHandler *handlers.UserHandler, wsManager *ws.Manager, wsCRUDHandler *ws.CRUDHandler) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -132,8 +136,8 @@ func setupRouter(userHandler *handlers.UserHandler, wsManager *ws.Manager) *chi.
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// WebSocket endpoint
-	r.Get("/ws", ws.HandleWebSocket(wsManager))
+	// WebSocket endpoint — now supports bidirectional CRUD + notifications
+	r.Get("/ws", ws.HandleWebSocket(wsManager, wsCRUDHandler))
 
 	// REST API routes
 	r.Group(func(r chi.Router) {

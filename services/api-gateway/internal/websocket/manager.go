@@ -123,6 +123,26 @@ func (m *Manager) BroadcastExcluding(msg *WSMessage, excludeUserID string) {
 }
 
 // ClientCount returns the number of connected clients
+// SendToClient sends a raw JSON message to a specific client identified by userID.
+// Returns false if the client is not connected or the send buffer is full.
+func (m *Manager) SendToClient(userID string, data []byte) bool {
+	m.mu.RLock()
+	client, ok := m.clients[userID]
+	m.mu.RUnlock()
+
+	if !ok {
+		return false
+	}
+
+	select {
+	case client.Send <- data:
+		return true
+	default:
+		log.Printf("WebSocket: send buffer full for user %s, skipping", userID)
+		return false
+	}
+}
+
 func (m *Manager) ClientCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
