@@ -10,11 +10,9 @@ import (
 	"api-gateway/internal/nats/client"
 )
 
-// CRUDHandler processes incoming WebSocket CRUD requests by forwarding them
-// to the user-service via the NATS RPC client and sending responses back
-// over the WebSocket connection.
+// processes incoming WebSocket CRUD requests, performs NATS RPC calls to user-service, and sends responses back to clients via the WS Manager.
 type CRUDHandler struct {
-	rpcClient *client.Client
+	rpcClient *client.Client // same client that is used by REST handlers to communicate with user-service
 	manager   *Manager
 }
 
@@ -26,8 +24,7 @@ func NewCRUDHandler(rpcClient *client.Client, manager *Manager) *CRUDHandler {
 	}
 }
 
-// HandleMessage routes an incoming WSRequest to the appropriate CRUD handler
-// and sends the WSResponse back to the originating client.
+// routes an incoming WSRequest to the appropriate CRUD handler and sends the WSResponse back to the originating client.
 func (h *CRUDHandler) HandleMessage(clientUserID string, raw []byte) {
 	var req WSRequest
 	if err := json.Unmarshal(raw, &req); err != nil {
@@ -42,6 +39,7 @@ func (h *CRUDHandler) HandleMessage(clientUserID string, raw []byte) {
 
 	log.Printf("WebSocket CRUD: user %s, action=%s, request_id=%s", clientUserID, req.Action, req.RequestID)
 
+	// dispatch to the appropriate handler based on the action type
 	switch req.Action {
 	case ActionCreateUser:
 		h.handleCreateUser(clientUserID, &req)

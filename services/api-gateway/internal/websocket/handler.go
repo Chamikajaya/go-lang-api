@@ -34,9 +34,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// HandleWebSocket handles new WebSocket connection requests.
-// The crudHandler parameter enables bidirectional CRUD operations over WebSocket.
-//
+// handles new WebSocket connection requests.
 // GET /ws?userId={uuid}
 func HandleWebSocket(manager *Manager, crudHandler *CRUDHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -66,8 +64,7 @@ func HandleWebSocket(manager *Manager, crudHandler *CRUDHandler) http.HandlerFun
 	}
 }
 
-// readPump reads messages from the WebSocket connection and forwards them
-// to the CRUDHandler for processing. This enables bidirectional CRUD over WebSocket.
+// reads messages from the WebSocket connection and forwards them to the CRUDHandler for processing.
 func readPump(client *Client, manager *Manager, crudHandler *CRUDHandler) {
 	defer func() {
 		manager.Unregister(client)
@@ -97,7 +94,7 @@ func readPump(client *Client, manager *Manager, crudHandler *CRUDHandler) {
 	}
 }
 
-// send messages to client and handle pings - sending notifications
+// send messages from server to client +  handle keep alive pings
 func writePump(client *Client, manager *Manager) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {

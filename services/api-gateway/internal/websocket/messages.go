@@ -2,7 +2,7 @@ package websocket
 
 import "encoding/json"
 
-// WebSocket CRUD action types (client → server)
+// WebSocket CRUD action types
 const (
 	ActionCreateUser = "user.create"
 	ActionGetUser    = "user.get"
@@ -11,17 +11,14 @@ const (
 	ActionDeleteUser = "user.delete"
 )
 
-// WSRequest represents an incoming WebSocket CRUD request from a client.
-// The client sends a JSON message with an action, a request_id for correlation,
-// and a data payload containing the operation-specific fields.
+// incoming WebSocket CRUD request from a client.
 type WSRequest struct {
 	Action    string          `json:"action"`
 	RequestID string          `json:"request_id"`
 	Data      json.RawMessage `json:"data,omitempty"`
 }
 
-// WSResponse is the response sent back to the requesting WebSocket client
-// after a CRUD operation is processed.
+// response sent back to the requesting WebSocket client after a CRUD operation is processed.
 type WSResponse struct {
 	Action    string      `json:"action"`
 	RequestID string      `json:"request_id"`
@@ -39,7 +36,6 @@ type WSError struct {
 
 // Payloads for individual CRUD operations embedded in WSRequest.Data
 
-// CreateUserPayload is the data payload for ActionCreateUser.
 type CreateUserPayload struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
@@ -49,12 +45,10 @@ type CreateUserPayload struct {
 	Status    string `json:"status,omitempty"`
 }
 
-// GetUserPayload is the data payload for ActionGetUser.
 type GetUserPayload struct {
 	UserID string `json:"user_id"`
 }
 
-// UpdateUserPayload is the data payload for ActionUpdateUser.
 type UpdateUserPayload struct {
 	UserID    string  `json:"user_id"`
 	FirstName *string `json:"firstName,omitempty"`
@@ -65,7 +59,6 @@ type UpdateUserPayload struct {
 	Status    *string `json:"status,omitempty"`
 }
 
-// DeleteUserPayload is the data payload for ActionDeleteUser.
 type DeleteUserPayload struct {
 	UserID string `json:"user_id"`
 }
