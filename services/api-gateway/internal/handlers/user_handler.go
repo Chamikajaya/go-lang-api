@@ -86,6 +86,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		Data:    req,
 	}
 
+	// ! TODO: Error checking - implement one error type, instead of sending 2 types of erros
 	resp, errResp, err := h.client.CreateUser(r.Context(), rpcReq)
 	if err != nil {
 		handleRPCError(w, err)

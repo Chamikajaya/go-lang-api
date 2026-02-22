@@ -50,10 +50,11 @@ func HandleWebSocket(manager *Manager, crudHandler *CRUDHandler) http.HandlerFun
 			return
 		}
 
+		// ! TODO: Use NewClient instead of here - use it in the manager.go file itself
 		client := &Client{
 			UserID: userID,
 			Conn:   conn,
-			Send:   make(chan []byte, sendBufferSize),
+			Send:   make(chan []byte, sendBufferSize), // TODO: ! Is the buffer size needed / channel ? + use of buffer and its purpose
 		}
 
 		manager.Register(client)
@@ -119,6 +120,7 @@ func writePump(client *Client, manager *Manager) {
 			w.Write(message)
 
 			// Drain any queued messages into the same write
+			// ! TODO: Necessary ?
 			n := len(client.Send)
 			for i := 0; i < n; i++ {
 				w.Write([]byte("\n"))

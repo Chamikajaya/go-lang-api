@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,44 +25,39 @@ import (
 )
 
 // @title User Management API
-// @version 2.0
+// @version 1.0
 // @description API Gateway for User Management Microservices
-
 // @host localhost:8080
 // @BasePath /
-
 // @schemes http https
+// ! TODO: NEED TO UNDERSTAND MAIN() FUNC
 func main() {
 	cfg := config.LoadConfig()
 
 	nc, err := connectNATS(cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to NATS: %v", err)
+		slog.Error("Failed to connect to NATS", "error", err)
+		os.Exit(1) // failing fast if we can't connect to NATS, since it's critical for the API Gateway's functionality
 	}
 	defer nc.Close()
-	log.Println("Successfully connected to NATS")
+	slog.Info("Successfully connected to NATS")
 
-	// Initialize NATS RPC client
 	rpcClient := client.NewClient(nc, cfg.RPCTimeout)
-
-	// Initialize handlers
 	userHandler := handlers.NewUserHandler(rpcClient)
 
-	// Initialize WebSocket manager
 	wsManager := ws.NewManager()
 	go wsManager.Run()
-	log.Println("WebSocket manager started")
+	slog.Info("WebSocket manager started")
 
-	// Initialize WebSocket CRUD handler (reuses the same NATS RPC client as REST)
 	wsCRUDHandler := ws.NewCRUDHandler(rpcClient, wsManager)
-	log.Println("WebSocket CRUD handler initialized")
+	slog.Info("WebSocket CRUD handler initialized")
 
 	// Initialize and start NATS event subscriber (bridges NATS events → WebSocket)
 	eventSubscriber := subscriber.NewSubscriber(nc, wsManager)
 	if err := eventSubscriber.Start(); err != nil {
-		log.Fatalf("Failed to start event subscriber: %v", err)
+		slog.Error("Failed to start event subscriber", "error", err)
 	}
-	log.Println("NATS event subscriber started")
+	slog.Info("NATS event subscriber started")
 
 	// Setup router
 	router := setupRouter(userHandler, wsManager, wsCRUDHandler)
@@ -78,68 +73,67 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("API Gateway starting on port %s", cfg.ServerPort)
-		log.Printf("Swagger docs available at http://localhost:%s/swagger/index.html", cfg.ServerPort)
-		log.Printf("WebSocket endpoint available at ws://localhost:%s/ws?userId={uuid}", cfg.ServerPort)
+		slog.Info("API Gateway starting", "port", cfg.ServerPort)
+		slog.Info("Swagger docs available", "url", fmt.Sprintf("http://localhost:%s/swagger/index.html", cfg.ServerPort))
+		slog.Info("WebSocket endpoint available", "url", fmt.Sprintf("ws://localhost:%s/ws?userId={uuid}", cfg.ServerPort))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed to start: %v", err)
+			slog.Error("Server failed to start", "error", err)
 		}
 	}()
 
 	// Graceful shutdown
-	gracefulShutdown(server, nc, eventSubscriber)
+	gracefulShutdown(server, nc, eventSubscriber, cfg.ShutdownTimeout)
 }
 
 func connectNATS(cfg *config.Config) (*nats.Conn, error) {
+
 	opts := []nats.Option{
-		nats.Name("api-gateway"),
-		nats.ReconnectWait(2 * time.Second),
-		nats.MaxReconnects(-1), // Unlimited reconnects
+		nats.Name(cfg.NATS_CONNECTION_NAME),
+		nats.ReconnectWait(cfg.RECONNECT_WAIT), // how long to wait before attempting to reconnect after a disconnect
+		nats.MaxReconnects(-1),                 // Unlimited reconnects
+
+		/* EVENT CALLBACKS */
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
-				log.Printf("NATS disconnected: %v", err)
+				slog.Error("NATS disconnected", "error", err)
 			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			log.Printf("NATS reconnected to %s", nc.ConnectedUrl())
+			slog.Info("NATS reconnected", "url", nc.ConnectedUrl())
 		}),
+		// catch all for async errors
 		nats.ErrorHandler(func(nc *nats.Conn, sub *nats.Subscription, err error) {
-			log.Printf("NATS error: %v", err)
+			slog.Error("NATS error", "error", err)
 		}),
 	}
 
-	nc, err := nats.Connect(cfg.NatsURL, opts...)
+	nc, err := nats.Connect(cfg.NatsURL, opts...) // ... unpacks the slice into individual arguments
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
+		return nil, fmt.Errorf("failed to connect to NATS: %w", err) // %w -> error wrapping
 	}
 
 	return nc, nil
 }
 
-func setupRouter(userHandler *handlers.UserHandler, wsManager *ws.Manager, wsCRUDHandler *ws.CRUDHandler) *chi.Mux {
+func setupRouter(userHandler *handlers.UserHandler, wsManager *ws.Manager, wsCRUDHandler *ws.CRUDHandler) *chi.Mux { // dependency injection
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(chimiddleware.RequestID)
-	r.Use(chimiddleware.RealIP)
+	r.Use(chimiddleware.RequestID) // to generate a unique request ID for each incoming HTTP request
 	r.Use(chimiddleware.Logger)
-	r.Use(chimiddleware.Recoverer)
+	r.Use(chimiddleware.Recoverer) //  If a handler panics, Recoverer catches it, logs the stack trace, and returns a 500 Internal Server Error instead of crashing the whole server process.
 	r.Use(middleware.CORS)
-
-	// Swagger documentation
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
-	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// WebSocket endpoint — now supports bidirectional CRUD + notifications
+	// WebSocket endpoint (upgrading standard http GET to persistent WebSocket) -  supports CRUD + notifications
 	r.Get("/ws", ws.HandleWebSocket(wsManager, wsCRUDHandler))
 
-	// REST API routes
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.ContentTypeJSON)
 
@@ -155,28 +149,30 @@ func setupRouter(userHandler *handlers.UserHandler, wsManager *ws.Manager, wsCRU
 	return r
 }
 
-func gracefulShutdown(server *http.Server, nc *nats.Conn, eventSub *subscriber.Subscriber) {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+func gracefulShutdown(server *http.Server, nc *nats.Conn, eventSub *subscriber.Subscriber, timeout time.Duration) {
 
-	sig := <-quit
-	log.Printf("Received signal: %v. Shutting down...", sig)
+	quit := make(chan os.Signal, 1)                      // shape of the pipe is os.Signal messages , 1 means buffer can hold just one os.Signal message
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM) // sigint -> ctrl + c && sigterm -> standard polite method to kill a process - routing those signals to the channel created
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	sig := <-quit // code paueses here and wait until the signal generates
+	slog.Info("Received signal", "signal", sig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout) // wrapping the slate context with a timeout, so that if the shutdown takes too long, it will forcefully exit after the timeout duration.
+
 	defer cancel()
 
 	// Stop event subscriber first
 	if err := eventSub.Stop(); err != nil {
-		log.Printf("Error stopping event subscriber: %v", err)
+		slog.Error("Error stopping event subscriber", "error", err)
 	}
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Error shutting down HTTP server: %v", err)
+		slog.Error("Error shutting down HTTP server", "error", err)
 	}
 
 	if err := nc.Drain(); err != nil {
-		log.Printf("Error draining NATS connection: %v", err)
+		slog.Error("Error draining NATS connection", "error", err) // draining -> nats pushes out any pending final messages it was holding
 	}
 
-	log.Println("API Gateway stopped gracefully")
+	slog.Info("API Gateway stopped gracefully")
 }

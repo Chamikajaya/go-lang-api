@@ -39,6 +39,7 @@ func NewManager() *Manager {
 	}
 }
 
+// ! TODO: For logs implement slog instead
 // starts the manager's main loop for handling register/unregister events. - go routine
 func (m *Manager) Run() {
 	for {
@@ -86,6 +87,7 @@ func (m *Manager) BroadcastToAll(msg *WSMessage) {
 		return
 	}
 
+	// * Potential race condition could occur here
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -100,6 +102,7 @@ func (m *Manager) BroadcastToAll(msg *WSMessage) {
 }
 
 // BroadcastExcluding sends a message to all connected clients EXCEPT the specified user
+// ! TODO : Get rid of this and implemtn socket auto disconnect on user deletion,
 func (m *Manager) BroadcastExcluding(msg *WSMessage, excludeUserID string) {
 	data, err := json.Marshal(msg)
 	if err != nil {

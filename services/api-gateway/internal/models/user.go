@@ -14,11 +14,12 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
+	// using pointers for the optional fields - lets Go tell the difference between "not provided" (nil) vs "provided but empty/zero" (non-nil)
 	FirstName *string `json:"firstName,omitempty" example:"Jane"`
 	LastName  *string `json:"lastName,omitempty" example:"Doe"`
 	Email     *string `json:"email,omitempty" example:"jane.doe@example.com"`
 	Phone     *string `json:"phone,omitempty" example:"+1234567890"`
-	Age       *int32  `json:"age,omitempty" example:"25"`
+	Age       *int32  `json:"age,omitempty" example:"25"` // if no pointer used here, and age was not sent in the request, it would default to 0, which could be misinterpreted as "set age to 0" instead of "age not provided"
 	Status    *string `json:"status,omitempty" example:"Inactive"`
 }
 

@@ -13,6 +13,7 @@ const (
 	UserStatusInactive UserStatus = "Inactive"
 )
 
+// ! TODO:  IMPLMENT the following at apigw level as well
 type CreateUserRequest struct {
 	FirstName string     `json:"firstName" validate:"required,min=2,max=50"`
 	LastName  string     `json:"lastName" validate:"required,min=2,max=50"`

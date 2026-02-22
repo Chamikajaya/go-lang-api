@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// ! TODO: Get rid of pool
 type UserService struct {
 	pool      *pgxpool.Pool
 	queries   database.Querier
